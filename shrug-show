@@ -1,0 +1,85 @@
+#!/bin/dash
+# Main function: displays contents of a file in a repo/index
+
+####### Main function starts here ########
+
+# Checks if .shrug directory already exists
+if ! test -d ".shrug"
+then 
+    echo ""$0": error: no .shrug directory containing shrug repository exists"
+    exit 1
+fi
+
+# Checks if only 1 command line argument is given
+if [ "$#" -ne 1 ]
+then 
+    echo "usage: "$0" <commit>:<filename>"
+    exit 1
+fi
+
+str="$1"
+# check if first argument has ":"
+if echo "$str" | grep ":" > /dev/null
+then 
+    # seperate the first argument "commitNum:fileName"
+    # where the delimiter is ":"
+    commitNum=$(echo "$str" | cut -d: -f1)
+    fileName=$(echo "$str" | cut -d: -f2)
+
+    # check if user gives a commit number, 
+    # if not given, go to index folder
+    if [ -z "$commitNum" ]
+    then  
+        # check if fileName only contains alphanumeric, ".", "-" and "_" 
+        # \W won't work because ASCII has other special chracters
+        # also checks if fileName is empty/all spaces - invalid file
+        if echo "$fileName" | grep -E "[^A-Za-z0-9._-]"  > /dev/null \
+           || test -z "$fileName"
+        then
+            echo ""$0": error: invalid filename '"$fileName"'"
+            exit 1
+        fi
+        
+        # displays content of file in index folder
+        if test -e .shrug/index/"$fileName"
+        then
+            cat .shrug/index/"$fileName" 
+
+        else
+            echo ""$0": error: '"$fileName"' not found in index"
+            exit 1
+        fi
+       
+
+    else # go to commit folders
+
+        # check if fileName only contains alphanumeric, ".", "-" and "_" 
+        # also checks if fileName is empty/all spaces - invalid file
+        if echo "$fileName" | grep -E "[^A-Za-z0-9._-]"  > /dev/null \
+           || test -z "$fileName"
+        then
+            echo ""$0": error: invalid filename '"$fileName"'"
+            exit 1
+        fi
+
+        # displays content of file in latest commit repo
+        if test -d .shrug/commit."$commitNum"
+        then 
+            if test -e .shrug/commit."$commitNum"/"$fileName"
+            then
+                cat .shrug/commit."$commitNum"/"$fileName" 
+
+            else
+                echo ""$0": error: '"$fileName"' not found in commit $commitNum"
+                exit 1
+            fi
+        else # if the commit number does not exists, give warning
+            echo ""$0": error: unknown commit '"$commitNum"'"
+            exit 1
+        fi
+    fi
+
+else # warn if the first arg does not have ":"
+    echo ""$0": error: invalid object "$str""
+    exit 1
+fi

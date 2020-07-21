@@ -1,0 +1,29 @@
+#!/bin/dash
+# Main function: displays message of each commit
+
+####### Main function starts here ########
+
+# Checks if .shrug directory exists 
+if ! test -d ".shrug"
+then 
+    echo ""$0": error: no .shrug directory containing shrug repository exists"
+    exit 1
+fi
+
+# check if any commits exists, otherwise prints error message
+if ! test -e .shrug/commit.0
+then
+    echo "$0: error: your repository does not have any commits yet"
+    exit 1
+fi
+
+# check if there are more than 1 command line args
+if [ $# -gt 0 ]
+then
+    echo "usage: "$0""
+    exit 1
+fi
+
+# prints log
+cat .shrug/log.txt
+
