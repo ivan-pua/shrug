@@ -1,0 +1,100 @@
+#!/bin/dash
+
+# Stack Overflow: POSIX does not specify arrays - we need workarounds
+
+####### Main function starts here ########
+
+# Checks if .shrug repo exists
+if ! test -d ".shrug"
+then 
+    echo ""$0": error: no .shrug directory containing shrug repository exists"
+    exit 1
+fi
+
+# get the latest commit version
+if ! test -d .shrug/commit.0
+then 
+    echo ""$0": error: your repository does not have any commits yet"
+    exit 1 
+else 
+    version=$(ls -d .shrug/commit.* | sed 's/.*it.//g' | sort -n | tail -1)
+
+fi
+
+# get all regular files from curr dir, index and latest commit folder
+# and then sorts them in alphabetical order 
+# ls -p will list directories with "/" e.g. "exampleFolder/"
+allFiles=$(echo `find .shrug/commit.$version .shrug/index -type f | \
+         cut -d"/" -f3 && ls -p | grep -v /` | tr ' ' '\n'  | sort -u)
+
+# if there are no files in all 3 folders - working dir, index and latest commit
+# then exit the program
+if [ -z "$allFiles" ] 
+then
+    exit
+fi
+
+# prints status of each file depending on difference between the 
+# latest commit, index and working directory
+echo "$allFiles" | while read "f"
+do
+    # if file is present in curr directory, but absent in index 
+    if [ -e "$f" ] && [ ! -e .shrug/index/"$f" ]
+    then
+        echo ""$f" - untracked" 
+
+    # if file is absent in curr dir but present in index 
+    elif [ ! -e "$f" ] && [ -e .shrug/index/"$f" ] 
+    then
+        # if file exists in the latest commit
+        if [ -e .shrug/commit.$version/"$f" ]
+        then
+            echo ""$f" - file deleted" 
+        else
+            echo ""$f" - added to index, file deleted" 
+        fi
+
+    # if file absent in both index and curr dir
+    elif [ ! -e "$f" ] && [ ! -e .shrug/index/"$f" ]
+    then
+        echo ""$f" - deleted" 
+
+    # file is present in curr dir and latest commit
+    elif [ -e "$f" ] && [ -e .shrug/commit.$version/"$f" ] 
+    then 
+        # if file is same in all 3 - working dir, commit and index
+        if diff "$f" .shrug/commit.$version/"$f" > /dev/null && \
+           diff "$f" .shrug/index/"$f" > /dev/null && \
+           diff .shrug/index/"$f" .shrug/commit.$version/"$f"
+        then
+            echo ""$f" - same as repo"
+
+        # commit and index same, but working dir is different 
+        elif diff .shrug/index/"$f" .shrug/commit.$version/"$f" > /dev/null && \
+             ! diff "$f" .shrug/index/"$f" > /dev/null
+        then
+            echo ""$f" - file changed, changes not staged for commit"
+        
+        # working dir and index same, but latest commit differnt
+        elif ! diff "$f" .shrug/commit.$version/"$f" > /dev/null && \
+             diff "$f" .shrug/index/"$f" > /dev/null
+        then
+            echo ""$f" - file changed, changes staged for commit"
+        
+        # file in all 3 (commit, index and current dir) are different
+        else 
+            echo ""$f" - file changed, different changes staged for commit"
+        fi
+    else # file present in working dir and index same, but absent in latest commit
+       
+        # if file in index and current dir is same 
+        if diff "$f" .shrug/index/"$f" > /dev/null 
+        then 
+            echo ""$f" - added to index"
+        else # if different
+            echo ""$f" - added to index, file changed"
+        fi
+    fi
+
+
+done
